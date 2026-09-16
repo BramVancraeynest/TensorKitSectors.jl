@@ -114,3 +114,15 @@ function Fsymbol(a::I, b::I, c::I, d::I, e::I, f::I) where {N, K, I <: TambaraYa
         return one(T)
     end
 end
+
+function Base.show(io::IO, a::TambaraYamagami)
+    print_type = get(io, :typeinfo, nothing) !== typeof(a)
+    print_type && print(io, type_repr(typeof(a)), "(")
+    if _ism(a)
+        print(io, ":m")
+    else
+        print(io, a.n)
+    end
+    print_type && print(io, ")")
+    return nothing
+end
