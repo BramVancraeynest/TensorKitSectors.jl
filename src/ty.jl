@@ -1,0 +1,117 @@
+# Tambara-Yamagami category for the cyclic group ℤ_N
+#---------------------------------------------------------------------------------------#
+"""
+    struct TambaraYamagami{N, K} <: Sector
+    TambaraYamagami{N, K}(n::Integer)
+
+Represents the Tambara-Yamagami fusion category built from the cyclic group ``ℤ_N``.
+The simple objects are the group elements `0, 1, …, N - 1` of ``ℤ_N``,
+together with a single non-invertible object `m`.
+
+The non-trivial fusion rules are given by
+```math
+g ⊗ h = g + h \\mod N, \\qquad g ⊗ m = m ⊗ g = m, \\qquad m ⊗ m = \\bigoplus_{g ∈ ℤ_N} g.
+```
+
+The F-symbols are constructed from a non-degenerate symmetric bicharacter
+``χ(g, h) = \\exp(2π i g h / N)``, together with a Frobenius-Schur sign for the
+non-invertible object; the latter is fixed as the type parameter `K`. For fixed `N`,
+the two choices `K = ±1` generally give distinct fusion categories.
+
+Only the case `N == 2` and `K == 1` admits a braiding, as this case coincides with Ising, but this is not currently implemented.
+
+## Fields
+- `n::Int`: a group element for `0 <= n < N`, or the non-invertible object `m` for `n == N`.
+
+## References
+[1] D. Tambara and S. Yamagami, *Tensor categories with fusion rules of self-duality for
+    finite abelian groups*, J. Algebra **209**, 692-707 (1998).
+[2] M. Barkeshli, P. Bonderson, M. Cheng and Z. Wang, *Symmetry Fractionalization, Defects,
+    and Gauging of Topological Phases*, Phys. Rev. B **100**, 115147 (2019),
+    [arXiv:1410.4540](https://arxiv.org/abs/1410.4540).
+"""
+struct TambaraYamagami{N, K} <: Sector
+    n::Int
+    function TambaraYamagami{N, K}(c) where {N, K}
+        _check_TY_typeparams(N, K)
+        0 <= c <= N || throw(DomainError(c, "TambaraYamagami{$N} labels must satisfy 0 <= c <= $N"))
+        return new{N, K}(c)
+    end
+end
+function TambaraYamagami{N, K}(s::Symbol) where {N, K}
+    s === :m || throw(ArgumentError("Unknown label $s: use an integer or `:m`"))
+    return TambaraYamagami{N, K}(N)
+end
+
+function _check_TY_typeparams(N, K)
+    N isa Int && N >= 1 || throw(ArgumentError("N must be a positive integer, got $N"))
+    K === 1 || K === -1 || throw(ArgumentError("The Frobenius-Schur indicator K must be either 1 or -1, got $K"))
+    return nothing
+end
+
+_ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether c is the non-invertible
+_chi(N::Int, g::Int, h::Int) = cispi(2 * g * h / N) # Non-degenerate symmetric bicharacter on ℤ_N
+
+const TambaraYamagamiProdIterator{N, K} = SectorProductIterator{TambaraYamagami{N, K}}
+
+Base.length(::SectorValues{TambaraYamagami{N, K}}) where {N, K} = N + 1
+Base.IteratorSize(::Type{<:TambaraYamagamiProdIterator}) = HasLength()
+
+function Base.length(it::TambaraYamagamiProdIterator{N, K}) where {N, K}
+    return (_ism(it.a) && _ism(it.b)) ? N : 1
+end
+function Base.iterate(::SectorValues{TambaraYamagami{N, K}}, i::Int = 0) where {N, K}
+    return i > N ? nothing : (TambaraYamagami{N, K}(i), i + 1)
+end
+function Base.iterate(it::TambaraYamagamiProdIterator{N, K}, state::Int = 0) where {N, K}
+    a, b = it.a, it.b
+    am, bm = _ism(a), _ism(b)
+    if am && bm
+        state == N && return nothing
+        return TambaraYamagami{N, K}(state), state + 1
+    else
+        state == 0 || return nothing
+        c = (am || bm) ? TambaraYamagami{N, K}(N) : TambaraYamagami{N, K}(mod(a.n + b.n, N))
+        return c, 1
+    end
+end
+
+Base.one(::Type{TambaraYamagami{N, K}}) where {N, K} = TambaraYamagami{N, K}(0)
+Base.isless(a1::I, a2::I) where {I <: TambaraYamagami} = isless(a1.n, a2.n)
+Base.hash(a::Type{<:TambaraYamagami}, h::UInt) = hash(a.n, h)
+dim(a::TambaraYamagami{N}) where {N} = _ism(a) ? sqrt(float(N)) : 1.0
+unit(a::Type{<:TambaraYamagami}) = one(a)
+dual(a::TambaraYamagami{N, K}) where {N, K} = _ism(a) ? a : TambaraYamagami{N, K}(mod(- a.n, N))
+
+FusionStyle(::Type{<:TambaraYamagami}) = SimpleFusion()
+BraidingStyle(::Type{<:TambaraYamagami}) = NoBraiding()
+fusionscalartype(::Type{<:TambaraYamagami}) = ComplexF64
+
+function Nsymbol(a::I, b::I, c::I) where {N, I <: TambaraYamagami{N}}
+    am, bm, cm = _ism(a), _ism(b), _ism(c)
+    if am && bm
+        return !cm
+    elseif am || bm
+        return cm
+    else
+        return !cm && c.n == mod(a.n + b.n, N)
+    end
+end
+
+function Fsymbol(a::I, b::I, c::I, d::I, e::I, f::I) where {N, K, I <: TambaraYamagami{N, K}}
+    T = fusionscalartype(I)
+
+    (Nsymbol(a, b, e) && Nsymbol(e, c, d) && Nsymbol(b, c, f) && Nsymbol(a, f, d)) || return zero(T)
+
+    am, bm, cm = _ism(a), _ism(b), _ism(c)
+
+    if am && bm && cm # F^{mmm}_m
+        return (K / sqrt(N)) * conj(_chi(N, e.n, f.n))
+    elseif !am && bm && !cm # F^{gmh}_{m}
+        return _chi(N, a.n, c.n)
+    elseif am && !bm && cm # F^{mgm}_{m}
+        return _chi(N, b.n, d.n)
+    else # F^{abc}_{a+b+c}
+        return one(T)
+    end
+end
