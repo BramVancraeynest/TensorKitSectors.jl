@@ -29,8 +29,8 @@ export ZNElement, Z2Element, Z3Element, Z4Element
 export ProductSector, NamedSector, @NamedSector, TimeReversed
 export FermionParity, FermionNumber, FermionSpin
 export PlanarTrivial, FibonacciAnyon, IsingAnyon
-export IsingBimodule
 export TambaraYamagami
+export IsingBimodule
 
 # accessors
 export charge, modulus

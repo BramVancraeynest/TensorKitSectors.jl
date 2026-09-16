@@ -31,7 +31,7 @@ Only the case `N == 2` and `K == 1` admits a braiding, as this case coincides wi
     [arXiv:1410.4540](https://arxiv.org/abs/1410.4540).
 """
 struct TambaraYamagami{N, K} <: Sector
-    n::Int
+    n::UInt8
     function TambaraYamagami{N, K}(c) where {N, K}
         _check_TY_typeparams(N, K)
         0 <= c <= N || throw(DomainError(c, "TambaraYamagami{$N} labels must satisfy 0 <= c <= $N"))
@@ -49,8 +49,8 @@ function _check_TY_typeparams(N, K)
     return nothing
 end
 
-_ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether c is the non-invertible
-_chi(N::Int, g::Int, h::Int) = cispi(2 * g * h / N) # Non-degenerate symmetric bicharacter on ℤ_N
+_ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether a is the non-invertible
+_chi(a::I, b::I) where {N, I <: TambaraYamagami{N}} = cispi(2 * a.n * b.n / N) # Non-degenerate symmetric bicharacter on ℤ_N
 
 const TambaraYamagamiProdIterator{N, K} = SectorProductIterator{TambaraYamagami{N, K}}
 
@@ -76,12 +76,11 @@ function Base.iterate(it::TambaraYamagamiProdIterator{N, K}, state::Int = 0) whe
     end
 end
 
-Base.one(::Type{TambaraYamagami{N, K}}) where {N, K} = TambaraYamagami{N, K}(0)
 Base.isless(a1::I, a2::I) where {I <: TambaraYamagami} = isless(a1.n, a2.n)
 Base.hash(a::Type{<:TambaraYamagami}, h::UInt) = hash(a.n, h)
 dim(a::TambaraYamagami{N}) where {N} = _ism(a) ? sqrt(float(N)) : 1.0
-unit(a::Type{<:TambaraYamagami}) = one(a)
-dual(a::TambaraYamagami{N, K}) where {N, K} = _ism(a) ? a : TambaraYamagami{N, K}(mod(- a.n, N))
+unit(::Type{I}) where {I <: TambaraYamagami} = I(0)
+dual(a::TambaraYamagami{N, K}) where {N, K} = _ism(a) ? a : TambaraYamagami{N, K}(mod(N - a.n, N))
 
 FusionStyle(::Type{<:TambaraYamagami}) = SimpleFusion()
 BraidingStyle(::Type{<:TambaraYamagami}) = NoBraiding()
@@ -106,11 +105,11 @@ function Fsymbol(a::I, b::I, c::I, d::I, e::I, f::I) where {N, K, I <: TambaraYa
     am, bm, cm = _ism(a), _ism(b), _ism(c)
 
     if am && bm && cm # F^{mmm}_m
-        return (K / sqrt(N)) * conj(_chi(N, e.n, f.n))
+        return (K / sqrt(N)) * conj(_chi(e, f))
     elseif !am && bm && !cm # F^{gmh}_{m}
-        return _chi(N, a.n, c.n)
+        return _chi(a, c)
     elseif am && !bm && cm # F^{mgm}_{m}
-        return _chi(N, b.n, d.n)
+        return _chi(b, d)
     else # F^{abc}_{a+b+c}
         return one(T)
     end
