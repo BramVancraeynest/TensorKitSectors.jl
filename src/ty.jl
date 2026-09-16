@@ -108,7 +108,7 @@ function Fsymbol(a::I, b::I, c::I, d::I, e::I, f::I) where {N, K, I <: TambaraYa
         return (K / sqrt(N)) * conj(_chi(e, f))
     elseif !am && bm && !cm # F^{gmh}_{m}
         return _chi(a, c)
-    elseif am && !bm && cm # F^{mgm}_{m}
+    elseif am && !bm && cm # F^{mgm}_{h}
         return _chi(b, d)
     else # F^{abc}_{a+b+c}
         return one(T)
