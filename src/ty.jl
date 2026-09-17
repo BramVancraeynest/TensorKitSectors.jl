@@ -49,29 +49,37 @@ function _check_TY_typeparams(N, K)
     return nothing
 end
 
+"""
+    modulus(n::TambaraYamagami{N, K}) -> N
+    modulus(::Type{<:TambaraYamagami{N, K}}) -> N
+
+The order of the cyclic group, or the modulus of the charge labels.
+"""
+modulus(n::TambaraYamagami) = modulus(typeof(n))
+modulus(::Type{<:TambaraYamagami{N, K}}) where {N, K} = N
+
 _ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether a is the non-invertible
 _chi(a::I, b::I) where {N, I <: TambaraYamagami{N}} = cispi(2 * a.n * b.n / N) # Non-degenerate symmetric bicharacter on ℤ_N
 
-const TambaraYamagamiProdIterator{N, K} = SectorProductIterator{TambaraYamagami{N, K}}
+Base.length(::SectorValues{I}) where {I <: TambaraYamagami} = modulus(I) + 1
+Base.IteratorSize(::Type{<:SectorProductIterator{I}}) where {I <: TambaraYamagami} = HasLength()
 
-Base.length(::SectorValues{TambaraYamagami{N, K}}) where {N, K} = N + 1
-Base.IteratorSize(::Type{<:TambaraYamagamiProdIterator}) = HasLength()
-
-function Base.length(it::TambaraYamagamiProdIterator{N, K}) where {N, K}
-    return (_ism(it.a) && _ism(it.b)) ? N : 1
+function Base.length(it::SectorProductIterator{I}) where {I <: TambaraYamagami}
+    return (_ism(it.a) && _ism(it.b)) ? modulus(I) : 1
 end
-function Base.iterate(::SectorValues{TambaraYamagami{N, K}}, i::Int = 0) where {N, K}
-    return i > N ? nothing : (TambaraYamagami{N, K}(i), i + 1)
+function Base.iterate(::SectorValues{I}, i::Int = 0) where {I <: TambaraYamagami}
+    return i > modulus(I) ? nothing : (I(i), i + 1)
 end
-function Base.iterate(it::TambaraYamagamiProdIterator{N, K}, state::Int = 0) where {N, K}
+function Base.iterate(it::SectorProductIterator{I}, state::Int = 0) where {I <: TambaraYamagami}
     a, b = it.a, it.b
     am, bm = _ism(a), _ism(b)
+    N = modulus(I)
     if am && bm
         state == N && return nothing
-        return TambaraYamagami{N, K}(state), state + 1
+        return I(state), state + 1
     else
         state == 0 || return nothing
-        c = (am || bm) ? TambaraYamagami{N, K}(N) : TambaraYamagami{N, K}(mod(a.n + b.n, N))
+        c = (am || bm) ? I(N) : I(mod(a.n + b.n, N))
         return c, 1
     end
 end
