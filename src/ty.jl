@@ -32,10 +32,10 @@ Only the case `N == 2` and `K == 1` admits a braiding, as this case coincides wi
 """
 struct TambaraYamagami{N, K} <: Sector
     n::UInt8
-    function TambaraYamagami{N, K}(c) where {N, K}
+    function TambaraYamagami{N, K}(n) where {N, K}
         _check_TY_typeparams(N, K)
-        0 <= c <= N || throw(DomainError(c, "TambaraYamagami{$N} labels must satisfy 0 <= c <= $N"))
-        return new{N, K}(c)
+        0 <= n <= N|| throw(DomainError(n, "TambaraYamagami{$N} labels must satisfy 0 <= n <= $N"))
+        return new{N, K}(n)
     end
 end
 function TambaraYamagami{N, K}(s::Symbol) where {N, K}
@@ -44,7 +44,7 @@ function TambaraYamagami{N, K}(s::Symbol) where {N, K}
 end
 
 function _check_TY_typeparams(N, K)
-    N isa Int && N >= 1 || throw(ArgumentError("N must be a positive integer, got $N"))
+    N isa Int && 1 <= N <= 128 || throw(ArgumentError("N must satisfy 1 <= N <= 128, got $N"))
     K === 1 || K === -1 || throw(ArgumentError("The Frobenius-Schur indicator K must be either 1 or -1, got $K"))
     return nothing
 end
