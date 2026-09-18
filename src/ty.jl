@@ -60,8 +60,8 @@ The order of the cyclic group, or the modulus of the charge labels.
 modulus(n::TambaraYamagami) = modulus(typeof(n))
 modulus(::Type{TambaraYamagami{N, K}}) where {N, K} = N
 
-_ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether a is the non-invertible
-_chi(a::I, b::I) where {N, I <: TambaraYamagami{N}} = cispi(2 * a.n * b.n / N) # Non-degenerate symmetric bicharacter on ℤ_N
+_ism(a::TambaraYamagami) = a.n == modulus(a) # Checks whether a is the non-invertible
+_chi(a::I, b::I) where {I <: TambaraYamagami} = cispi(2 * a.n * b.n / modulus(I)) # Non-degenerate symmetric bicharacter on ℤ_N
 
 Base.length(::SectorValues{I}) where {I <: TambaraYamagami} = modulus(I) + 1
 Base.IteratorSize(::Type{<:SectorProductIterator{I}}) where {I <: TambaraYamagami} = HasLength()
@@ -90,7 +90,7 @@ Base.isless(a1::I, a2::I) where {I <: TambaraYamagami} = isless(a1.n, a2.n)
 Base.hash(a::Type{<:TambaraYamagami}, h::UInt) = hash(a.n, h)
 dim(a::TambaraYamagami) = _ism(a) ? sqrt(float(modulus(a))) : 1.0
 unit(::Type{I}) where {I <: TambaraYamagami} = I(0)
-dual(a::TambaraYamagami) = _ism(a) ? a : typeof(a)(modulus(a) - a.n)
+dual(a::TambaraYamagami) = _ism(a) ? a : typeof(a)(mod(- Int(a.n), modulus(a)))
 
 FusionStyle(::Type{<:TambaraYamagami}) = SimpleFusion()
 BraidingStyle(::Type{<:TambaraYamagami}) = NoBraiding()
