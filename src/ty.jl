@@ -43,8 +43,10 @@ function TambaraYamagami{N, K}(s::Symbol) where {N, K}
     return TambaraYamagami{N, K}(N)
 end
 
+const SMALL_TY_CUTOFF = (typemax(UInt8) + 1) ÷ 2
+
 function _check_TY_typeparams(N, K)
-    N isa Int && 1 <= N <= 128 || throw(ArgumentError("N must satisfy 1 <= N <= 128, got $N"))
+    N isa Int && 1 <= N <= SMALL_TY_CUTOFF || throw(ArgumentError("N must satisfy 1 <= N <= $SMALL_TY_CUTOFF, got $N"))
     K === 1 || K === -1 || throw(ArgumentError("The Frobenius-Schur indicator K must be either 1 or -1, got $K"))
     return nothing
 end
@@ -56,7 +58,7 @@ end
 The order of the cyclic group, or the modulus of the charge labels.
 """
 modulus(n::TambaraYamagami) = modulus(typeof(n))
-modulus(::Type{<:TambaraYamagami{N, K}}) where {N, K} = N
+modulus(::Type{TambaraYamagami{N, K}}) where {N, K} = N
 
 _ism(a::TambaraYamagami{N, K}) where {N, K} = a.n == N # Checks whether a is the non-invertible
 _chi(a::I, b::I) where {N, I <: TambaraYamagami{N}} = cispi(2 * a.n * b.n / N) # Non-degenerate symmetric bicharacter on ℤ_N
@@ -86,9 +88,9 @@ end
 
 Base.isless(a1::I, a2::I) where {I <: TambaraYamagami} = isless(a1.n, a2.n)
 Base.hash(a::Type{<:TambaraYamagami}, h::UInt) = hash(a.n, h)
-dim(a::TambaraYamagami{N}) where {N} = _ism(a) ? sqrt(float(N)) : 1.0
+dim(a::TambaraYamagami) = _ism(a) ? sqrt(float(modulus(a))) : 1.0
 unit(::Type{I}) where {I <: TambaraYamagami} = I(0)
-dual(a::TambaraYamagami{N, K}) where {N, K} = _ism(a) ? a : TambaraYamagami{N, K}(mod(N - a.n, N))
+dual(a::TambaraYamagami) = _ism(a) ? a : typeof(a)(modulus(a) - a.n)
 
 FusionStyle(::Type{<:TambaraYamagami}) = SimpleFusion()
 BraidingStyle(::Type{<:TambaraYamagami}) = NoBraiding()
@@ -126,11 +128,7 @@ end
 function Base.show(io::IO, a::TambaraYamagami)
     print_type = get(io, :typeinfo, nothing) !== typeof(a)
     print_type && print(io, type_repr(typeof(a)), "(")
-    if _ism(a)
-        print(io, ":m")
-    else
-        print(io, a.n)
-    end
+    print(io, _ism(a) ? ":m" : Int(a.n))
     print_type && print(io, ")")
     return nothing
 end
